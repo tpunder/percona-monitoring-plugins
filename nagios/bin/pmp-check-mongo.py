@@ -65,6 +65,8 @@ def parse_options(args):
     p.add_option('-A', '--action', action='store', type='choice', dest='action', default='check_connect',
                  choices=funcList, help="The action you want to take. Valid choices are (%s) Default: %s" % (", ".join(funcList), 'check_connect'))
     p.add_option('-s', '--ssl', dest='ssl', default=False, help='Connect using SSL')
+    p.add_option('--ca-certs', action='store', type='string', dest='ca_certs', default=None, help='The SSL CA to use (ssl_ca_certs option in PyMongo)')
+    p.add_option('--certfile', action='store', type='string', dest='certfile', default=None, help='The SSL Client Cert to use (ssl_certfile option in PyMongo)')
     p.add_option('-r', '--replicaset', dest='replicaset', default=None, help='Connect to replicaset')
     p.add_option('-c', '--collection', action='store', dest='collection', default='foo', help='Specify the collection in check_cannary_test')
     p.add_option('-d', '--database', action='store', dest='database', default='tmp', help='Specify the database in check_cannary_test')
@@ -129,6 +131,8 @@ class NagiosMongoChecks:
         self.critical = None
         self.action = 'check_connect'
         self.ssl = False
+        self.ca_certs = None
+        self.certfile = None
         self.replicaset = None
         self.collection = 'foo'
         self.database = 'tmp'
@@ -275,9 +279,9 @@ class NagiosMongoChecks:
         try:
             # ssl connection for pymongo > 2.3
             if self.replicaset is None:
-                con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, serverSelectionTimeoutMS=2500)
+                con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, ssl_ca_certs=self.ca_certs, ssl_certfile=self.certfile, serverSelectionTimeoutMS=2500)
             else:
-                con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, replicaSet=self.replicaset, serverSelectionTimeoutMS=2500)
+                con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, ssl_ca_certs=self.ca_certs, ssl_certfile=self.certfile, replicaSet=self.replicaset, serverSelectionTimeoutMS=2500)
             if (self.user and self.passwd) and not con['admin'].authenticate(self.user, self.passwd):
                 sys.exit("CRITICAL - Username and password incorrect")
         except Exception, e:
