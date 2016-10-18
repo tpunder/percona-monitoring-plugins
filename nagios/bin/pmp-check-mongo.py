@@ -67,6 +67,8 @@ def parse_options(args):
     p.add_option('-s', '--ssl', dest='ssl', default=False, help='Connect using SSL')
     p.add_option('--ca-certs', action='store', type='string', dest='ca_certs', default=None, help='The SSL CA to use (ssl_ca_certs option in PyMongo)')
     p.add_option('--certfile', action='store', type='string', dest='certfile', default=None, help='The SSL Client Cert to use (ssl_certfile option in PyMongo)')
+    p.add_option('--auth-source', action='store', type='string', dest='auth_source', default=None, help='The Auth Source to use. (e.g. $external)')
+    p.add_option('--auth-mechanism', action='store', type='string', dest='auth_mechanism', default='DEFAULT', help='The Auth Mechanism to use. (e.g. MONGODB-X509)')
     p.add_option('-r', '--replicaset', dest='replicaset', default=None, help='Connect to replicaset')
     p.add_option('-c', '--collection', action='store', dest='collection', default='foo', help='Specify the collection in check_cannary_test')
     p.add_option('-d', '--database', action='store', dest='database', default='tmp', help='Specify the database in check_cannary_test')
@@ -133,6 +135,8 @@ class NagiosMongoChecks:
         self.ssl = False
         self.ca_certs = None
         self.certfile = None
+        self.auth_source = None
+        self.auth_mechanism = 'DEFAULT'
         self.replicaset = None
         self.collection = 'foo'
         self.database = 'tmp'
@@ -282,7 +286,7 @@ class NagiosMongoChecks:
                 con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, ssl_ca_certs=self.ca_certs, ssl_certfile=self.certfile, serverSelectionTimeoutMS=2500)
             else:
                 con = pymongo.MongoClient(self.host, self.port, ssl=self.ssl, ssl_ca_certs=self.ca_certs, ssl_certfile=self.certfile, replicaSet=self.replicaset, serverSelectionTimeoutMS=2500)
-            if (self.user and self.passwd) and not con['admin'].authenticate(self.user, self.passwd):
+            if (self.user) and not con['admin'].authenticate(self.user, self.passwd, source=self.auth_source, mechanism=self.auth_mechanism):
                 sys.exit("CRITICAL - Username and password incorrect")
         except Exception, e:
             raise
@@ -490,7 +494,7 @@ class NagiosMongoChecks:
         warning_level = warning_level or self.get_default('check_repl_lag', 'warning')
         critical_level = critical_level or self.get_default('check_repl_lag', 'critical')
 
-        # make a write incase the client is not writing, but us an update to avoid wasting space
+        # make a write incase the client is not writing, but use an update to avoid wasting space
         self.connection['test']['lag_check'].update({"_id":1}, {"_id": 1, "x": 1})
         # get a  fresh status for the replset
         try:
